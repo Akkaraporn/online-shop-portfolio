@@ -8,7 +8,7 @@
 # Both profiles share the same Postgres, the same Flyway migrations and the
 # same Redis. That shared state is what makes cross-backend parity testable.
 # ---------------------------------------------------------------------------
-name: vibecode-shop
+name: online-shop-portfolio
 
 services:
   postgres:

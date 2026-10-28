@@ -1,4 +1,4 @@
-# Web Store for portfolio
+# online-shop-portfolio
 
 One web store API, defined once and implemented twice.
 

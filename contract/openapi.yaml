@@ -10,7 +10,7 @@
 openapi: 3.1.0
 
 info:
-  title: VibeCode Store API
+  title: Online Shop Portfolio API
   version: 1.0.0
   description: |
     A web store API defined once and implemented twice — NestJS and Spring Boot —

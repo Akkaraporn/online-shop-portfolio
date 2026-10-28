@@ -1,8 +1,8 @@
 {
-  "name": "@vibecode/api-node",
+  "name": "@online-shop-portfolio/api-node",
   "version": "1.0.0",
   "private": true,
-  "description": "NestJS implementation of the VibeCode Store contract. The reference implementation.",
+  "description": "NestJS implementation of the Online Shop Portfolio contract. The reference implementation.",
   "license": "UNLICENSED",
   "scripts": {
     "build": "nest build",

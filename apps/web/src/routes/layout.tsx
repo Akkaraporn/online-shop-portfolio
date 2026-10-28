@@ -65,7 +65,7 @@ function Header({ onOpenCart }: { onOpenCart: () => void }) {
     <header className="sticky top-0 z-40 border-b border-border bg-card/95 backdrop-blur">
       <div className="mx-auto flex max-w-6xl items-center gap-6 px-4 py-3 lg:px-6">
         <Link to="/" className="shrink-0 text-lg font-semibold">
-          VibeCode<span className="text-primary">.</span>
+          Online Shop<span className="text-primary">.</span>
         </Link>
 
         <nav aria-label="หมวดหมู่" className="hidden gap-4 text-sm lg:flex">

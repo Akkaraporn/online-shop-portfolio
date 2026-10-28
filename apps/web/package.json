@@ -1,9 +1,9 @@
 {
-  "name": "@vibecode/web",
+  "name": "@online-shop-portfolio/web",
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "React storefront for the VibeCode Store contract.",
+  "description": "React storefront for the Online Shop Portfolio contract.",
   "license": "UNLICENSED",
   "scripts": {
     "dev": "vite",
