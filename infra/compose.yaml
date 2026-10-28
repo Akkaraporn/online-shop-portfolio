@@ -90,6 +90,7 @@ services:
       CURRENCY: ${CURRENCY:-THB}
       SHIPPING_FLAT_CENTS: ${SHIPPING_FLAT_CENTS:-5000}
       RESERVATION_TTL_MINUTES: ${RESERVATION_TTL_MINUTES:-15}
+      RESERVATION_SWEEP_INTERVAL_SECONDS: ${RESERVATION_SWEEP_INTERVAL_SECONDS:-60}
     depends_on:
       postgres: { condition: service_healthy }
       redis:    { condition: service_healthy }
@@ -119,6 +120,7 @@ services:
       CURRENCY: ${CURRENCY:-THB}
       SHIPPING_FLAT_CENTS: ${SHIPPING_FLAT_CENTS:-5000}
       RESERVATION_TTL_MINUTES: ${RESERVATION_TTL_MINUTES:-15}
+      RESERVATION_SWEEP_INTERVAL_SECONDS: ${RESERVATION_SWEEP_INTERVAL_SECONDS:-60}
     depends_on:
       postgres: { condition: service_healthy }
       redis:    { condition: service_healthy }

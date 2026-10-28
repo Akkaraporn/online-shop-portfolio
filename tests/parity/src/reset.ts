@@ -1,9 +1,9 @@
 import { readFile } from 'node:fs/promises';
 
 import { Redis } from 'ioredis';
-import pg from 'pg';
 
-import { DATABASE_URL, REDIS_URL } from './env.js';
+import { withDatabase } from './db.js';
+import { REDIS_URL } from './env.js';
 
 const SEED = new URL('../../../migrations/V2__seed.sql', import.meta.url);
 
@@ -21,24 +21,22 @@ const SEED = new URL('../../../migrations/V2__seed.sql', import.meta.url);
  */
 export async function resetDatabase(): Promise<void> {
   const seed = await readFile(SEED, 'utf8');
-  const client = new pg.Client({ connectionString: DATABASE_URL });
-  await client.connect();
-  try {
+  await withDatabase(async (client) => {
     const { rows } = await client.query<{ name: string }>(
       `SELECT format('%I.%I', schemaname, tablename) AS name
          FROM pg_tables
         WHERE schemaname = 'public' AND tablename <> 'flyway_schema_history'`,
     );
-    await client.query('BEGIN');
-    await client.query(`TRUNCATE ${rows.map((r) => r.name).join(', ')} RESTART IDENTITY CASCADE`);
-    await client.query(seed);
-    await client.query('COMMIT');
-  } catch (error) {
-    await client.query('ROLLBACK').catch(() => undefined);
-    throw error;
-  } finally {
-    await client.end();
-  }
+    try {
+      await client.query('BEGIN');
+      await client.query(`TRUNCATE ${rows.map((r) => r.name).join(', ')} RESTART IDENTITY CASCADE`);
+      await client.query(seed);
+      await client.query('COMMIT');
+    } catch (error) {
+      await client.query('ROLLBACK').catch(() => undefined);
+      throw error;
+    }
+  });
   await flushCache();
 }
 

@@ -424,7 +424,7 @@ One suite, two backends, and a report that says whether they agree.
 | # | Task | Priority | Done when |
 | --- | --- | --- | --- |
 | 4.1 | [Test harness + Schemathesis property testing](https://app.clickup.com/t/z8v9xnfz6b) ✅ | Urgent | `API_BASE_URL=http://localhost:8080/api/v1 make test-parity` is green against NestJS |
-| 4.2 | [Scenario tests: auth flow, cart merge, happy path](https://app.clickup.com/t/z8v9xnfz6e) | High | — |
+| 4.2 | [Scenario tests: auth flow, cart merge, happy path](https://app.clickup.com/t/z8v9xnfz6e) ✅ | High | Every scenario green against NestJS, none referring to an implementation detail |
 | 4.3 | ⭐ [Concurrency, idempotency & cross-backend tests](https://app.clickup.com/t/z8v9xnfz6j) | Urgent | — |
 | 4.4 | [GitHub Actions matrix + parity report generator](https://app.clickup.com/t/z8v9xnfz6p) | High | — |
 
@@ -478,6 +478,36 @@ the contract, or seeding identifiers, would let it reach their logic; 4.2's scen
 tests cover those paths by hand in the meantime.
 
 Every rule above is in `CLAUDE.md` (cross-implementation rules 9–13) for 5.2.
+
+### What 4.2 settled
+
+Eighteen scenarios in `tests/parity/specs/` — auth flow, cart merge, purchase — all
+green against NestJS on the first run. They assert status, problem `type`, schema
+shape and, above all, **state afterwards**: stock on hand and reserved, read through
+`GET /admin/products` by SKU, so a scenario proves what the shop now holds rather than
+what a response claims.
+
+- **Auth**: the board's six steps exactly — the reused refresh token is a 401
+  `token-reuse-detected`, and its successor is then dead too. Another sign-in of the
+  same account survives, since a family is one sign-in.
+- **Cart**: a guest basket survives registration, logout and login; a merge sums
+  shared lines and caps at 99 (the variant is restocked first so the cap, not the
+  stock check, is what limits it); merging twice, or an unknown token, returns the
+  current basket.
+- **Purchase**: checkout reserves, confirm moves nothing, the provider's real webhook
+  sells; cancel returns the reservation and is idempotent; a paid order is 409
+  `order-not-cancellable`; someone else's order and payment are 403.
+
+**Expiry does not shorten the TTL.** The board suggested a 3-second
+`RESERVATION_TTL_SECONDS` for the test stack, but that would expire every other
+scenario's checkout mid-flow. Instead the scenario moves *one order's* `expires_at`
+into the past in the shared database (`src/db.ts`) and waits for the real sweeper.
+That needed the sweep interval to be configurable: **`RESERVATION_SWEEP_INTERVAL_SECONDS`**
+(default 60, 5 in `.env.example`) — **Java must read the same variable**. The scenario
+completes in about one interval.
+
+A suite that is green on its first run was checked the other way: with the backend
+stopped, every scenario fails and the gateway answers `backend-unavailable`.
 
 ## Phase 5 — Spring Boot Port
 

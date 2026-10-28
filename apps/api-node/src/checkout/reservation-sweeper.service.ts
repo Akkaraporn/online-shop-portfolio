@@ -7,14 +7,12 @@ import {
 import type { Logger } from 'pino';
 
 import { LOGGER } from '../common/logging/logger.module';
+import { ENV, type Env } from '../config/config.module';
 import { PrismaService } from '../infra/prisma/prisma.service';
 import { RedisService } from '../infra/redis/redis.service';
 
-const SWEEP_INTERVAL_MS = 60 * 1000;
 const FIRST_SWEEP_DELAY_MS = 15 * 1000;
 const LOCK_KEY = 'reservations:sweeper:lock';
-/** Shorter than the interval, so a crashed sweeper's lock frees before the next run. */
-const LOCK_TTL_SECONDS = 50;
 /** Bounded per run, so one sweep cannot hold locks across a huge backlog. */
 const BATCH_SIZE = 100;
 
@@ -32,8 +30,11 @@ interface ExpiredReservation {
  * With it, the reservation is the only thing standing between "promised" and
  * "available", and it has a deadline.
  *
- * Runs every minute — the reservation TTL is 15 minutes, so a minute of lateness is
- * immaterial, and a short interval keeps each batch small.
+ * Runs every `RESERVATION_SWEEP_INTERVAL_SECONDS` (a minute by default) — the
+ * reservation TTL is 15 minutes, so a minute of lateness is immaterial, and a short
+ * interval keeps each batch small. The development stack sweeps every few seconds so
+ * the parity suite's expiry scenario does not wait a minute; Java reads the same
+ * variable.
  *
  * Hand-rolled rather than `@nestjs/schedule`, which is ESM-only at v12 and unusable
  * from a CommonJS build under Jest. One interval is all this needs.
@@ -41,22 +42,32 @@ interface ExpiredReservation {
 @Injectable()
 export class ReservationSweeperService implements OnModuleInit, OnModuleDestroy {
   private timer?: NodeJS.Timeout;
+  private readonly intervalMs: number;
+  /** Shorter than the interval, so a crashed sweeper's lock frees before the next run. */
+  private readonly lockTtlSeconds: number;
 
   constructor(
+    @Inject(ENV) env: Env,
     @Inject(LOGGER) private readonly logger: Logger,
     private readonly prisma: PrismaService,
     private readonly redis: RedisService,
-  ) {}
+  ) {
+    this.intervalMs = env.RESERVATION_SWEEP_INTERVAL_SECONDS * 1000;
+    this.lockTtlSeconds = Math.max(1, Math.floor((env.RESERVATION_SWEEP_INTERVAL_SECONDS * 5) / 6));
+  }
 
   onModuleInit(): void {
     if (process.env.NODE_ENV === 'test') {
       return;
     }
 
-    this.timer = setInterval(() => void this.sweep(), SWEEP_INTERVAL_MS);
+    this.timer = setInterval(() => void this.sweep(), this.intervalMs);
     this.timer.unref();
 
-    const first = setTimeout(() => void this.sweep(), FIRST_SWEEP_DELAY_MS);
+    const first = setTimeout(
+      () => void this.sweep(),
+      Math.min(FIRST_SWEEP_DELAY_MS, this.intervalMs),
+    );
     first.unref();
   }
 
@@ -77,7 +88,7 @@ export class ReservationSweeperService implements OnModuleInit, OnModuleDestroy 
    * a minute later instead, which is the safe direction.
    */
   async sweep(): Promise<number> {
-    const holdsLock = await this.redis.acquireLock(LOCK_KEY, LOCK_TTL_SECONDS);
+    const holdsLock = await this.redis.acquireLock(LOCK_KEY, this.lockTtlSeconds);
 
     if (!holdsLock) {
       this.logger.debug('reservation sweep skipped: lock held or cache unavailable');

@@ -296,7 +296,14 @@ works.
   `V2__seed.sql`, flush Redis. Variant ids are *not* fixed in the seed, so refer to
   variants by SKU and resolve ids after a reset.
 - **Setup goes through the API** (`src/actors.ts`), never the database, so the setup
-  is itself exercised against whichever backend is up.
+  is itself exercised against whichever backend is up. The database is touched for
+  exactly two things the API cannot do: reset, and moving one order's reservation
+  expiry into the past (`src/db.ts`).
+- **Assert state, not messages**: status, problem `type`, and stock read back through
+  `GET /admin/products` (`stockOf`). Never English `detail` text.
+- **Asynchronous outcomes are polled** with `eventually()` — the webhook lands after
+  `PAYMENT_MOCK_DELAY_MS`, the sweeper every `RESERVATION_SWEEP_INTERVAL_SECONDS`.
+  Both backends read both variables.
 - **Every Schemathesis exception in `schemathesis.toml` states its reason.** A
   failure is fixed in the contract or the backend, not silenced.
 

@@ -50,6 +50,7 @@ export const envSchema = z.object({
   CURRENCY: z.literal('THB').default('THB'),
   SHIPPING_FLAT_CENTS: z.coerce.number().int().nonnegative().default(5000),
   RESERVATION_TTL_MINUTES: z.coerce.number().int().positive().default(15),
+  RESERVATION_SWEEP_INTERVAL_SECONDS: z.coerce.number().int().positive().default(60),
 });
 
 export type Env = z.infer<typeof envSchema>;

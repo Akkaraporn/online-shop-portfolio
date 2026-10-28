@@ -106,3 +106,57 @@ export const THAI_ADDRESS = {
   postalCode: '10110',
   country: 'TH',
 };
+
+export const PROBLEM = (slug: string) => `https://errors.example.com/${slug}`;
+
+/** A test card the mock provider settles successfully. */
+export const SUCCEEDING_CARD = '4242424242424242';
+
+/** A variant's raw stock as the back office sees it, found by SKU. */
+export async function stockOf(
+  adminToken: string,
+  sku: string,
+): Promise<{ stockOnHand: number; stockReserved: number }> {
+  let cursor: string | undefined;
+  do {
+    const query = new URLSearchParams({ limit: '50', ...(cursor ? { cursor } : {}) });
+    const res = await api('GET', `/admin/products?${query}`, { token: adminToken });
+    expectStatus('admin products', res.status, 200, res.body);
+    for (const product of res.body.items) {
+      const variant = product.variants.find((v: { sku: string }) => v.sku === sku);
+      if (variant) return { stockOnHand: variant.stockOnHand, stockReserved: variant.stockReserved };
+    }
+    cursor = res.body.nextCursor;
+  } while (cursor);
+  throw new Error(`no variant ${sku} in the back office`);
+}
+
+/** Checks the caller's basket out with a fresh Idempotency-Key. Returns the response. */
+export function checkout(token: string, idempotencyKey: string = randomUUID()) {
+  return api('POST', '/checkout', {
+    token,
+    idempotencyKey,
+    body: { shippingAddress: THAI_ADDRESS, paymentMethod: 'card' },
+  });
+}
+
+/**
+ * Polls until `predicate` holds, for outcomes that arrive asynchronously — the
+ * provider's webhook, the reservation sweeper. Returns the last value seen.
+ */
+export async function eventually<T>(
+  read: () => Promise<T>,
+  predicate: (value: T) => boolean,
+  { timeoutMs = 20_000, intervalMs = 250 } = {},
+): Promise<T> {
+  const deadline = Date.now() + timeoutMs;
+  let value = await read();
+  while (!predicate(value)) {
+    if (Date.now() > deadline) {
+      throw new Error(`condition not met within ${timeoutMs}ms; last value ${JSON.stringify(value)}`);
+    }
+    await new Promise((resolve) => setTimeout(resolve, intervalMs));
+    value = await read();
+  }
+  return value;
+}
