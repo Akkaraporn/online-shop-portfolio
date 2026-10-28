@@ -1,0 +1,23 @@
+{
+  "name": "@online-shop-portfolio/parity",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "One suite, either backend. Talks to API_BASE_URL and nothing else.",
+  "license": "UNLICENSED",
+  "scripts": {
+    "test": "vitest run && tsx scripts/schemathesis.ts",
+    "test:scenarios": "vitest run",
+    "test:schemathesis": "tsx scripts/schemathesis.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.5",
+    "@types/pg": "^8.23.1",
+    "ioredis": "^6.0.0",
+    "pg": "^8.23.1",
+    "tsx": "^4.23.15",
+    "typescript": "^5.9.3",
+    "vitest": "^3.2.7"
+  }
+}

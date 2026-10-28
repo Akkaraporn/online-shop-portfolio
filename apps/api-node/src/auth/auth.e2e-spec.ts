@@ -202,6 +202,74 @@ describe('auth', () => {
         response.body.errors.map((e: { field: string }) => e.field),
       ).toContain('password');
     });
+
+    it('accepts an email class-validator would refuse, by the contract pattern', async () => {
+      // A 64-character domain label: valid by the contract's pattern, refused by
+      // @IsEmail(). Found by Schemathesis; Java must accept it too.
+      const response = await http()
+        .post('/api/v1/auth/register')
+        .send({ ...REGISTRATION, email: `edge@${'a'.repeat(64)}.example` });
+
+      expect(response.status).toBe(201);
+    });
+
+    it('is 422, not 500, for a NUL character in any field', async () => {
+      // PostgreSQL text cannot hold U+0000; it reached the database as a 500 until
+      // Schemathesis sent one. Rejected before any query, naming the field.
+      const response = await http()
+        .post('/api/v1/auth/register')
+        .send({ ...REGISTRATION, fullName: 'Som\u0000chai' });
+
+      expect(response.status).toBe(422);
+      expect(response.body.errors).toEqual([
+        { field: 'fullName', message: 'must not contain a NUL character' },
+      ]);
+    });
+
+    it('ignores a NUL character in a property the contract does not declare', async () => {
+      // Unknown properties are stripped unread (rule 6), whatever they hold.
+      const response = await http()
+        .post('/api/v1/auth/register')
+        .send({ ...REGISTRATION, email: 'stray@example.com', 'x\u0000': 'y\u0000' });
+
+      expect(response.status).toBe(201);
+    });
+
+    it('is 400 bad-request for a body that is a JSON array', async () => {
+      const response = await http()
+        .post('/api/v1/auth/register')
+        .set('Content-Type', 'application/json')
+        .send('[null, null]');
+
+      expect(response.status).toBe(400);
+      expect(response.body.type).toBe('https://errors.example.com/bad-request');
+    });
+
+    it('is 400 bad-request with no body at all', async () => {
+      const response = await http().post('/api/v1/auth/register');
+
+      expect(response.status).toBe(400);
+      expect(response.body.type).toBe('https://errors.example.com/bad-request');
+    });
+  });
+
+  describe('POST /auth/logout', () => {
+    it('is 204 with no body: its body is optional', async () => {
+      const response = await http().post('/api/v1/auth/logout');
+
+      expect(response.status).toBe(204);
+    });
+
+    it('is 422 for a null token: optional means omittable, not nullable', async () => {
+      const response = await http()
+        .post('/api/v1/auth/logout')
+        .send({ refreshToken: null });
+
+      expect(response.status).toBe(422);
+      expect(
+        new Set(response.body.errors.map((e: { field: string }) => e.field)),
+      ).toEqual(new Set(['refreshToken']));
+    });
   });
 
   describe('POST /auth/login', () => {

@@ -3,7 +3,6 @@ import {
   IsIn,
   IsNotEmpty,
   IsObject,
-  IsOptional,
   IsString,
   Matches,
   MaxLength,
@@ -11,6 +10,7 @@ import {
 } from 'class-validator';
 
 import type { PaymentMethod } from '../../orders/order.types';
+import { Omittable } from '../../common/validation/omittable';
 
 /** Matches `Address` in the contract. */
 export class AddressDto {
@@ -29,7 +29,7 @@ export class AddressDto {
   @MaxLength(200)
   line1!: string;
 
-  @IsOptional()
+  @Omittable()
   @IsString()
   @MaxLength(200)
   line2?: string;
@@ -61,7 +61,7 @@ export class CheckoutDto {
   @IsIn(['card', 'promptpay'], { message: 'must be card or promptpay' })
   paymentMethod!: PaymentMethod;
 
-  @IsOptional()
+  @Omittable()
   @IsString()
   @MaxLength(500)
   note?: string;

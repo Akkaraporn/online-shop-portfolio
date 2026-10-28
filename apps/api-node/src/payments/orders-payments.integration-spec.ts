@@ -707,6 +707,24 @@ describe('orders and payments (integration)', () => {
       expect(response.status).toBe(401);
     });
 
+    dbIt('is 401, not 422, for an unsigned body that is not an event', async () => {
+      // The signature is checked before the body is validated. Found by Schemathesis:
+      // validating first told an unauthenticated caller what a valid event looks like.
+      const response = await http()
+        .post('/api/v1/webhooks/payment')
+        .set('Content-Type', 'application/json')
+        .send(JSON.stringify({ id: '' }));
+
+      expect(response.status).toBe(401);
+    });
+
+    dbIt('acknowledges a signed but malformed event with 200, unapplied', async () => {
+      const response = await deliverWebhook({ id: '', type: 'payment.succeeded', data: {} });
+
+      expect(response.status).toBe(200);
+      expect(response.body).toEqual({ received: true, applied: false });
+    });
+
     dbIt('needs no bearer token: it is authenticated by HMAC', async () => {
       const { order } = await placeOrder();
       const response = await deliverWebhook(succeededEvent(order.payment.id));

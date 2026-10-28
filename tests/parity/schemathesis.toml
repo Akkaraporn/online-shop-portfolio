@@ -1,0 +1,41 @@
+# Read automatically by Schemathesis from this directory. Every exception here is
+# a decision, not a silenced failure, and says which one. (The `unsupported_method`
+# check is excluded on the command line in scripts/schemathesis.ts, with its reason.)
+
+# Each of these answers a schema-valid body with 422 for a reason no schema can
+# state, so 422 is an expected answer to "valid" data here and nowhere else:
+#
+# - the list operations: `cursor` is opaque. Any string is schema-valid, but only
+#   one this API issued decodes — anything else is `invalid-cursor`.
+# - createProduct / updateProduct: a well-formed `categoryId` that names no
+#   category is a 422 on that field; which ids exist is data, not schema.
+# - checkout: an empty basket is a 422 — a fact about the caller's state.
+
+[[operations]]
+include-operation-id = "listProducts"
+checks.positive_data_acceptance.expected-statuses = [200, 422]
+
+[[operations]]
+include-operation-id = "listOrders"
+checks.positive_data_acceptance.expected-statuses = [200, 401, 422]
+
+[[operations]]
+include-operation-id = "listAdminProducts"
+checks.positive_data_acceptance.expected-statuses = [200, 401, 403, 422]
+
+[[operations]]
+include-operation-id = "listAllOrders"
+checks.positive_data_acceptance.expected-statuses = [200, 401, 403, 422]
+
+[[operations]]
+include-operation-id = "createProduct"
+checks.positive_data_acceptance.expected-statuses = [201, 401, 403, 409, 422]
+
+[[operations]]
+include-operation-id = "updateProduct"
+checks.positive_data_acceptance.expected-statuses = [200, 401, 403, 404, 409, 422]
+
+[[operations]]
+include-operation-id = "checkout"
+checks.positive_data_acceptance.expected-statuses = [201, 401, 409, 422]
+

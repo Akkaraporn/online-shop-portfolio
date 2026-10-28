@@ -6,7 +6,6 @@ import {
   IsIn,
   IsInt,
   IsNotEmpty,
-  IsOptional,
   IsString,
   IsUrl,
   IsUUID,
@@ -19,6 +18,7 @@ import {
   ValidateNested,
 } from 'class-validator';
 
+import { Omittable } from '../../common/validation/omittable';
 import { MAX_ORDER_LIMIT } from '../../orders/dto/list-orders.query';
 
 const SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
@@ -73,7 +73,7 @@ export class CreateProductDto {
   @IsUUID()
   categoryId!: string;
 
-  @IsOptional()
+  @Omittable()
   @IsIn(PRODUCT_STATUSES)
   status?: (typeof PRODUCT_STATUSES)[number];
 
@@ -84,7 +84,7 @@ export class CreateProductDto {
   @Type(() => CreateVariantDto)
   variants!: CreateVariantDto[];
 
-  @IsOptional()
+  @Omittable()
   @IsArray()
   @ArrayMaxSize(20)
   @IsUrl({ require_protocol: true }, { each: true })
@@ -93,27 +93,27 @@ export class CreateProductDto {
 
 /** Matches `UpdateProductRequest`. Variants are not touched here. */
 export class UpdateProductDto {
-  @IsOptional()
+  @Omittable()
   @IsString()
   @MaxLength(160)
   @Matches(SLUG, { message: 'must be a lowercase hyphenated slug' })
   slug?: string;
 
-  @IsOptional()
+  @Omittable()
   @IsString()
   @Length(1, 200)
   name?: string;
 
-  @IsOptional()
+  @Omittable()
   @IsString()
   @MaxLength(10_000)
   description?: string;
 
-  @IsOptional()
+  @Omittable()
   @IsUUID()
   categoryId?: string;
 
-  @IsOptional()
+  @Omittable()
   @IsIn(PRODUCT_STATUSES)
   status?: (typeof PRODUCT_STATUSES)[number];
 }
@@ -150,16 +150,16 @@ export class VariantIdParam {
 
 /** Query parameters for `GET /admin/products`. */
 export class ListAdminProductsQuery {
-  @IsOptional()
+  @Omittable()
   @IsIn(PRODUCT_STATUSES)
   status?: (typeof PRODUCT_STATUSES)[number];
 
-  @IsOptional()
+  @Omittable()
   @IsString()
   @Length(1, 512)
   cursor?: string;
 
-  @IsOptional()
+  @Omittable()
   @Type(() => Number)
   @IsInt()
   @Min(1)
@@ -169,20 +169,20 @@ export class ListAdminProductsQuery {
 
 /** Query parameters for `GET /admin/orders`. */
 export class ListAdminOrdersQuery {
-  @IsOptional()
+  @Omittable()
   @IsIn(ORDER_STATUSES)
   status?: (typeof ORDER_STATUSES)[number];
 
-  @IsOptional()
+  @Omittable()
   @IsUUID()
   userId?: string;
 
-  @IsOptional()
+  @Omittable()
   @IsString()
   @Length(1, 512)
   cursor?: string;
 
-  @IsOptional()
+  @Omittable()
   @Type(() => Number)
   @IsInt()
   @Min(1)

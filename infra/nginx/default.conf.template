@@ -25,6 +25,11 @@ server {
 
     client_max_body_size 8m;
 
+    # nginx refuses TRACE itself, before any location runs, with an HTML 405 page —
+    # which escaped the "every error is problem+json" rule until Schemathesis sent
+    # one. Server-level, because no location has been chosen when it happens.
+    error_page 405 = @method_not_allowed;
+
     # Answered by nginx itself, so it reports the gateway's health and not the
     # backend's. Used by the compose healthcheck.
     location = /__gateway/health {
@@ -65,6 +70,11 @@ server {
         access_log on;
         default_type application/problem+json;
         return 503 '{"type":"https://errors.example.com/backend-unavailable","title":"Backend unavailable","status":503,"detail":"The API backend is not reachable through the gateway. If this is a local stack, check that a backend profile is running: make up-node or make up-java."}';
+    }
+
+    location @method_not_allowed {
+        default_type application/problem+json;
+        return 405 '{"type":"https://errors.example.com/method-not-allowed","title":"Method not allowed","status":405,"detail":"The gateway does not accept this HTTP method."}';
     }
 
     location / {

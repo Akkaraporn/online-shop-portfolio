@@ -19,7 +19,7 @@ make clean          # stop and wipe the volume (next up re-seeds)
 make lint-contract  # Spectral over contract/openapi.yaml
 make gen-client     # regenerate apps/web/src/api/schema.d.ts from the contract
 make gen-prisma     # re-run migrations, then prisma db pull (never the reverse)
-make test-parity    # parity suite against whichever backend is up
+make test-parity    # parity suite + Schemathesis (needs API_BASE_URL)
 make db-verify      # prove the schema's constraints reject what they claim to
 make db-psql        # psql shell on the dev database
 make hooks          # install the git hooks (once per clone)
@@ -92,6 +92,21 @@ suite fails.
 7. **An absent optional field is omitted** from the body, not sent as `null` —
    unless the schema declares it nullable.
 8. **Every list returns the `Page` envelope**, even with one item.
+9. **Optional means omittable, not nullable.** `null` for a field the schema does
+   not declare nullable is a 422 on that field. Node uses `@Omittable()`, never
+   `@IsOptional()` (which lets `null` through).
+10. **A missing required body, or a body that is not a JSON object, is a 400
+    `bad-request`.** Malformed JSON too. Only an operation whose `requestBody` is
+    `required: false` may be called bodiless (Node marks its DTO `@OptionalBody()`).
+11. **No string may contain U+0000** — PostgreSQL text cannot store it. A 422 on
+    that field, checked before any query, never a 500.
+12. **An undeclared method on a known path is a 404 `not-found`**, like an unknown
+    path. Spring must map `HttpRequestMethodNotSupportedException` to it.
+13. **Emails are validated by the contract's pattern alone**, never `@IsEmail()` or
+    `@Email` — the two libraries disagree at the edges.
+
+Rules 9–13 were found by Schemathesis (task 4.1); 9–12 are also in the contract's own conventions. `make test-parity` re-checks them
+against whichever backend is up.
 
 ## The two things the contract cannot express
 
@@ -271,6 +286,19 @@ live database — `make up-infra` first — and skip loudly without one. They ru
 parallel they race each other. Anything that is
 genuinely a database behaviour belongs there: a double would only prove the double
 works.
+
+## Parity suite conventions
+
+- **`tests/parity` knows one thing about the backend: `API_BASE_URL`**, with no
+  default. A test that needs `if (backend === 'java')` has found a contract gap —
+  fix `openapi.yaml`.
+- **Every file starts from the seed**: truncate every table but Flyway's, re-run
+  `V2__seed.sql`, flush Redis. Variant ids are *not* fixed in the seed, so refer to
+  variants by SKU and resolve ids after a reset.
+- **Setup goes through the API** (`src/actors.ts`), never the database, so the setup
+  is itself exercised against whichever backend is up.
+- **Every Schemathesis exception in `schemathesis.toml` states its reason.** A
+  failure is fixed in the contract or the backend, not silenced.
 
 ## Rules that are easy to get wrong
 

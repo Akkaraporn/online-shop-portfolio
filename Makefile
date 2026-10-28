@@ -59,8 +59,15 @@ gen-prisma: ## Re-run migrations, then pull the schema into Prisma (never the re
 
 # --- test ------------------------------------------------------------------
 
-test-parity: ## Run the parity suite against whichever backend is currently up
-	cd tests/parity && npm test
+# API_BASE_URL has no default on purpose: the suite must be told what it tests.
+# The database and Redis default to the ports `make up-*` publishes; the suite
+# resets them to the seed before each file and after Schemathesis.
+test-parity: ## Parity suite + Schemathesis. API_BASE_URL=http://localhost:8080/api/v1 make test-parity
+	@test -n "$$API_BASE_URL" || { echo "API_BASE_URL is required, e.g. API_BASE_URL=http://localhost:8080/api/v1 make test-parity"; exit 2; }
+	cd tests/parity && { [ -d node_modules ] || npm ci; } && \
+	  PARITY_DATABASE_URL=$${PARITY_DATABASE_URL:-postgresql://shop:shop@localhost:55432/shop} \
+	  PARITY_REDIS_URL=$${PARITY_REDIS_URL:-redis://localhost:56379} \
+	  npm test
 
 # --- database --------------------------------------------------------------
 

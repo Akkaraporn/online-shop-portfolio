@@ -3,13 +3,13 @@ import {
   IsBoolean,
   IsIn,
   IsInt,
-  IsOptional,
   IsString,
   Length,
   Matches,
   Max,
   Min,
 } from 'class-validator';
+import { Omittable } from '../../common/validation/omittable';
 
 /** The four orderings the contract allows. Each one carries `id` as a tiebreaker. */
 export const PRODUCT_SORTS = [
@@ -36,25 +36,25 @@ export const MAX_LIMIT = 50;
  * arriving with `?utm_source=` works.
  */
 export class ListProductsQuery {
-  @IsOptional()
+  @Omittable()
   @IsString()
   @Length(1, 120)
   q?: string;
 
-  @IsOptional()
+  @Omittable()
   @IsString()
   @Matches(/^[a-z0-9]+(-[a-z0-9]+)*$/, {
     message: 'must be a lowercase hyphenated slug',
   })
   categorySlug?: string;
 
-  @IsOptional()
+  @Omittable()
   @Type(() => Number)
   @IsInt()
   @Min(0)
   minPriceCents?: number;
 
-  @IsOptional()
+  @Omittable()
   @Type(() => Number)
   @IsInt()
   @Min(0)
@@ -64,7 +64,7 @@ export class ListProductsQuery {
    * Accepts the forms a browser actually sends. `?inStockOnly` with no value is
    * treated as true, which is how HTML forms and hand-written URLs behave.
    */
-  @IsOptional()
+  @Omittable()
   @Transform(({ value }) => {
     if (value === undefined || value === null) return undefined;
     if (typeof value === 'boolean') return value;
@@ -76,18 +76,18 @@ export class ListProductsQuery {
   @IsBoolean()
   inStockOnly?: boolean;
 
-  @IsOptional()
+  @Omittable()
   @IsIn(PRODUCT_SORTS, {
     message: `must be one of: ${PRODUCT_SORTS.join(', ')}`,
   })
   sort?: ProductSort;
 
-  @IsOptional()
+  @Omittable()
   @IsString()
   @Length(1, 512)
   cursor?: string;
 
-  @IsOptional()
+  @Omittable()
   @Type(() => Number)
   @IsInt()
   @Min(1)

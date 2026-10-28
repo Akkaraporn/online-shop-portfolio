@@ -1,7 +1,21 @@
-import { ValidationPipe, ValidationPipeOptions } from '@nestjs/common';
+import {
+  ArgumentMetadata,
+  ValidationPipe,
+  ValidationPipeOptions,
+} from '@nestjs/common';
 import type { ValidationError } from 'class-validator';
 
-import { FieldError, Problems } from './problem.exception';
+import { FieldError, ProblemException, Problems } from './problem.exception';
+
+const OPTIONAL_BODY = Symbol('optional-body');
+
+/**
+ * Marks a body DTO whose request body the contract declares `required: false`, so
+ * the request may be sent with no body at all. Every other body is required.
+ */
+export function OptionalBody(): ClassDecorator {
+  return (target) => Reflect.defineMetadata(OPTIONAL_BODY, true, target);
+}
 
 /**
  * The global validation pipe.
@@ -40,8 +54,72 @@ export const validationPipeOptions: ValidationPipeOptions = {
     ),
 };
 
+/**
+ * The global pipe, plus three rules the contract needs and class-validator lacks.
+ * Each was found by Schemathesis, and each is what Spring does or must be told to do:
+ *
+ * - **A missing required body is a 400.** Nest turns it into `{}` before validating,
+ *   so a PATCH whose fields are all optional succeeded with no body at all. Spring
+ *   answers 400 by default.
+ * - **A body that is not a JSON object is a 400.** An array passed straight through:
+ *   class-validator finds nothing to check on one. Jackson cannot bind it either.
+ * - **No string may contain U+0000.** PostgreSQL text cannot store it, so a NUL in
+ *   any field reached the database and came back as a 500. It is a 422 on that field
+ *   instead, checked here once rather than on every string property.
+ */
+class ContractValidationPipe extends ValidationPipe {
+  override async transform(value: unknown, metadata: ArgumentMetadata): Promise<unknown> {
+    const isDtoBody =
+      metadata.type === 'body' &&
+      typeof metadata.metatype === 'function' &&
+      metadata.metatype !== Object;
+
+    if (isDtoBody && (value === undefined || value === null)) {
+      if (!Reflect.getMetadata(OPTIONAL_BODY, metadata.metatype!)) {
+        throw new ProblemException('bad-request', { detail: 'A request body is required.' });
+      }
+    } else if (isDtoBody && (typeof value !== 'object' || Array.isArray(value))) {
+      throw new ProblemException('bad-request', {
+        detail: 'The request body must be a JSON object.',
+      });
+    }
+
+    const transformed: unknown = await super.transform(value, metadata);
+
+    // Scanned after the whitelist has stripped unknown properties: those are ignored
+    // (rule 6), whatever they hold. An undeclared `@Body() body: unknown` is never
+    // scanned — its handler validates it itself, as the webhook does.
+    if (metadata.metatype !== Object) {
+      const nulBytes = findNulBytes(transformed);
+      if (nulBytes.length > 0) {
+        throw Problems.validationFailed(
+          nulBytes.map((field) => ({ field, message: 'must not contain a NUL character' })),
+          'One or more fields are invalid.',
+        );
+      }
+    }
+
+    return transformed;
+  }
+}
+
+/** Paths, in `errors[]` notation, of every string under `value` holding U+0000. */
+function findNulBytes(value: unknown, path = ''): string[] {
+  if (typeof value === 'string') {
+    return value.includes('\u0000') ? [path || 'value'] : [];
+  }
+  if (value === null || typeof value !== 'object') {
+    return [];
+  }
+  return Object.entries(value).flatMap(([key, child]) => [
+    // A key holding a NUL is reported against its parent: there is no field to name.
+    ...(key.includes('\u0000') ? [path || 'value'] : []),
+    ...findNulBytes(child, joinPath(path, key)),
+  ]);
+}
+
 export function createValidationPipe(): ValidationPipe {
-  return new ValidationPipe(validationPipeOptions);
+  return new ContractValidationPipe(validationPipeOptions);
 }
 
 /**

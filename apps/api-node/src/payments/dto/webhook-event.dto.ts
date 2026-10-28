@@ -2,19 +2,19 @@ import { Type } from 'class-transformer';
 import {
   IsDateString,
   IsObject,
-  IsOptional,
   IsString,
   IsUUID,
   Length,
   MaxLength,
   ValidateNested,
 } from 'class-validator';
+import { Omittable } from '../../common/validation/omittable';
 
 export class WebhookDataDto {
   @IsUUID()
   paymentId!: string;
 
-  @IsOptional()
+  @Omittable()
   @IsString()
   @MaxLength(200)
   failureReason?: string;
@@ -36,7 +36,7 @@ export class WebhookEventDto {
   @MaxLength(64)
   type!: string;
 
-  @IsOptional()
+  @Omittable()
   @IsDateString()
   createdAt?: string;
 

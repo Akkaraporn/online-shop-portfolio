@@ -1,4 +1,6 @@
-import { IsEmail, IsString, MaxLength } from 'class-validator';
+import { IsString, Matches, MaxLength } from 'class-validator';
+
+import { EMAIL_PATTERN } from './register.dto';
 
 /**
  * Matches `LoginRequest` in the contract.
@@ -9,7 +11,8 @@ import { IsEmail, IsString, MaxLength } from 'class-validator';
  * gets the same 401.
  */
 export class LoginDto {
-  @IsEmail({}, { message: 'must be a valid email address' })
+  @IsString()
+  @Matches(EMAIL_PATTERN, { message: 'must be a valid email address' })
   @MaxLength(255)
   email!: string;
 

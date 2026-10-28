@@ -39,6 +39,7 @@ Source of truth for the Node side:
 | `internal-error` | 500 | Internal server error | Anything unexpected. Carries `traceId` and nothing diagnostic. |
 | `service-unavailable` | 503 | Service unavailable | A required dependency is unreachable. Readiness uses this. |
 | `backend-unavailable` | 503 | Backend unavailable | **Emitted by the nginx gateway, not by a backend**, when no backend answers. |
+| `method-not-allowed` | 405 | Method not allowed | **Emitted by the nginx gateway, not by a backend**, for a method nginx refuses outright (`TRACE`). |
 
 ## Rules both implementations follow
 
@@ -53,6 +54,12 @@ Prisma error text, no connection string. Those go to the log, correlated by
 `traceId`. An unexpected error's message very often contains a query or a
 credential; a fixed `detail` string is the only safe choice. This is asserted in
 [`problem.e2e-spec.ts`](../apps/api-node/src/common/problem/problem.e2e-spec.ts).
+
+**A method a path does not declare is a 404 `not-found`**, exactly like a path that
+does not exist. Express does this by default; Spring answers 405 with an `Allow`
+header unless told otherwise, so the Java port must map
+`HttpRequestMethodNotSupportedException` to `not-found`. Settled here so the two
+cannot disagree; found by Schemathesis while 4.1 was built.
 
 **`errors[]` is present only when the failure is per-field**, and then it lists
 every offending field rather than the first. Field paths use the contract's own

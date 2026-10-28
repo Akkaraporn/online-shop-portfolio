@@ -1,8 +1,16 @@
-import { IsEmail, IsString, Length, MaxLength } from 'class-validator';
+import { IsString, Length, Matches, MaxLength } from 'class-validator';
+
+/**
+ * The contract's email pattern, verbatim. Not `@IsEmail()`: class-validator and
+ * Hibernate Validator disagree about the edges (a 64-character domain label, say),
+ * and an address one backend registers and the other refuses is a parity failure.
+ */
+export const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 /** Matches `RegisterRequest` in the contract. */
 export class RegisterDto {
-  @IsEmail({}, { message: 'must be a valid email address' })
+  @IsString()
+  @Matches(EMAIL_PATTERN, { message: 'must be a valid email address' })
   @MaxLength(255)
   email!: string;
 

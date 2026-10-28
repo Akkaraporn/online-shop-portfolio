@@ -423,7 +423,7 @@ One suite, two backends, and a report that says whether they agree.
 
 | # | Task | Priority | Done when |
 | --- | --- | --- | --- |
-| 4.1 | [Test harness + Schemathesis property testing](https://app.clickup.com/t/z8v9xnfz6b) | Urgent | — |
+| 4.1 | [Test harness + Schemathesis property testing](https://app.clickup.com/t/z8v9xnfz6b) ✅ | Urgent | `API_BASE_URL=http://localhost:8080/api/v1 make test-parity` is green against NestJS |
 | 4.2 | [Scenario tests: auth flow, cart merge, happy path](https://app.clickup.com/t/z8v9xnfz6e) | High | — |
 | 4.3 | ⭐ [Concurrency, idempotency & cross-backend tests](https://app.clickup.com/t/z8v9xnfz6j) | Urgent | — |
 | 4.4 | [GitHub Actions matrix + parity report generator](https://app.clickup.com/t/z8v9xnfz6p) | High | — |
@@ -433,6 +433,51 @@ correctly against Java, and a checkout retried with the same `Idempotency-Key`
 against the *other* backend has to replay rather than double-charge. That is
 only possible because the idempotency keys and the cart live in Postgres, not
 in per-process memory or Redis.
+
+### What 4.1 settled
+
+`tests/parity/` is a vitest suite that knows one thing — `API_BASE_URL`, with no
+default — and resets the shared database to the seed before every file (truncate all
+tables but Flyway's, re-run `V2__seed.sql`, flush Redis). Its helpers register, sign
+in and fill baskets through the API only. `make test-parity` runs it, then
+Schemathesis 4.32.7 (via `uvx`) at 200 examples per operation, signed in as the seeded
+admin, with every check except `unsupported_method`.
+
+**Schemathesis was right about all of it.** Against a backend with 380 passing tests
+it found:
+
+- **A 500.** A NUL byte in a login email reached PostgreSQL, which cannot store
+  U+0000 in text. Now a 422 on that field, for every string the API accepts, checked
+  once in the validation pipe after unknown properties are stripped.
+- **An HTML page.** nginx refuses `TRACE` itself, before routing, with its own HTML
+  405. Now `problem+json` (`method-not-allowed`, registered as gateway-emitted).
+- **The webhook validated before it authenticated**, so an unsigned junk body got a
+  422 describing a valid event, and a signed malformed one got 422 instead of the
+  contract's 200. The signature is now checked first.
+- **`null` was accepted for optional fields** (`@IsOptional()` skips null). Every DTO
+  now uses `@Omittable()`.
+- **A missing body was `{}`**, so an all-optional PATCH succeeded with nothing sent.
+  Missing or non-object bodies are now 400, which is Spring's default too.
+- **Constraints the backend enforced and the spec never stated**: an empty cursor,
+  `delta` of zero and its ±1,000,000 bound, empty address fields, the card-number
+  pattern, the login password bound, and 400/422 responses on twenty operations.
+- **Email validity was `@IsEmail()`'s opinion**, which Hibernate Validator would not
+  share. It is now one pattern in the contract, and both DTOs use it.
+- **Short refresh/cart tokens were 422s.** A string too short to be a token is just
+  an unknown token: 401 on refresh, 204 on logout, the current basket on merge.
+
+Two exceptions are written into the suite with their reasons
+(`tests/parity/schemathesis.toml`, `scripts/schemathesis.ts`): 422 is an expected
+answer for an opaque cursor, an unknown `categoryId` and an empty basket; and an
+undeclared method is a 404, a decision now in `docs/problem-types.md` that **Spring
+must be configured to match** (it answers 405 by default).
+
+Schemathesis also warns that eight operations mostly saw 404s — it cannot discover
+order numbers, cart item ids or variant ids without OpenAPI links. Adding `links` to
+the contract, or seeding identifiers, would let it reach their logic; 4.2's scenario
+tests cover those paths by hand in the meantime.
+
+Every rule above is in `CLAUDE.md` (cross-implementation rules 9–13) for 5.2.
 
 ## Phase 5 — Spring Boot Port
 

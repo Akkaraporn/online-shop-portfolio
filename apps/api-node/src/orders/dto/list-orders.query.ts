@@ -1,18 +1,19 @@
 import { Type } from 'class-transformer';
-import { IsInt, IsOptional, IsString, Length, Max, Min } from 'class-validator';
+import { IsInt, IsString, Length, Max, Min } from 'class-validator';
+import { Omittable } from '../../common/validation/omittable';
 
 export const MAX_ORDER_LIMIT = 50;
 
 /** Query parameters for `GET /orders`. */
 export class ListOrdersQuery {
-  @IsOptional()
+  @Omittable()
   @IsString()
   @Length(1, 512)
   cursor?: string;
 
   // Explicit conversion: implicit conversion is off globally because it also coerces
   // request bodies. See common/problem/validation.ts.
-  @IsOptional()
+  @Omittable()
   @Type(() => Number)
   @IsInt()
   @Min(1)

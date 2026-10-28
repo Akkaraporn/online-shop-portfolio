@@ -31,6 +31,16 @@ info:
     7. An absent optional field is omitted from the body, not sent as `null`
        (unless the schema declares it nullable).
     8. Every list operation returns the `Page` envelope, even for one item.
+    9. Optional means omittable: `null` for a field not declared nullable is a
+       422 on that field.
+    10. A missing required body, a body that is not a JSON object, and
+        malformed JSON are all 400 `bad-request`.
+    11. No string may contain U+0000 (PostgreSQL text cannot store it). Every
+        string schema in this file carries that constraint implicitly; a NUL
+        in a declared field is a 422 on that field. Undeclared properties are
+        ignored whatever they hold (rule 6 applies to bodies too).
+    12. A method a path does not declare is a 404 `not-found`, exactly like a
+        path that does not exist.
 
     Three questions this spec used to leave open, now settled:
 
@@ -164,6 +174,8 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/AuthSession"
+        "400":
+          $ref: "#/components/responses/BadRequest"
         "409":
           $ref: "#/components/responses/Conflict"
         "422":
@@ -199,6 +211,8 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/AuthSession"
+        "400":
+          $ref: "#/components/responses/BadRequest"
         "401":
           $ref: "#/components/responses/Unauthorized"
         "422":
@@ -231,6 +245,8 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/TokenPair"
+        "400":
+          $ref: "#/components/responses/BadRequest"
         "401":
           $ref: "#/components/responses/Unauthorized"
         "422":
@@ -256,10 +272,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/RefreshRequest"
+              $ref: "#/components/schemas/LogoutRequest"
       responses:
         "204":
           description: Signed out. No body.
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
+        "400":
+          $ref: "#/components/responses/BadRequest"
         "500":
           $ref: "#/components/responses/InternalError"
 
@@ -434,6 +454,8 @@ paths:
                 $ref: "#/components/schemas/ProductDetail"
         "404":
           $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
         "500":
           $ref: "#/components/responses/InternalError"
 
@@ -510,6 +532,8 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Cart"
+        "400":
+          $ref: "#/components/responses/BadRequest"
         "404":
           $ref: "#/components/responses/NotFound"
         "409":
@@ -557,6 +581,8 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Cart"
+        "400":
+          $ref: "#/components/responses/BadRequest"
         "404":
           $ref: "#/components/responses/NotFound"
         "409":
@@ -598,6 +624,8 @@ paths:
                 $ref: "#/components/schemas/Cart"
         "404":
           $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
         "500":
           $ref: "#/components/responses/InternalError"
 
@@ -622,6 +650,8 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Cart"
+        "400":
+          $ref: "#/components/responses/BadRequest"
         "401":
           $ref: "#/components/responses/Unauthorized"
         "422":
@@ -706,6 +736,8 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Order"
+        "400":
+          $ref: "#/components/responses/BadRequest"
         "401":
           $ref: "#/components/responses/Unauthorized"
         "409":
@@ -750,6 +782,8 @@ paths:
                 $ref: "#/components/schemas/OrderPage"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
         "500":
           $ref: "#/components/responses/InternalError"
 
@@ -778,6 +812,8 @@ paths:
           $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
         "500":
           $ref: "#/components/responses/InternalError"
 
@@ -812,6 +848,8 @@ paths:
           $ref: "#/components/responses/NotFound"
         "409":
           $ref: "#/components/responses/Conflict"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
         "500":
           $ref: "#/components/responses/InternalError"
 
@@ -856,6 +894,8 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Payment"
+        "400":
+          $ref: "#/components/responses/BadRequest"
         "401":
           $ref: "#/components/responses/Unauthorized"
         "403":
@@ -864,6 +904,8 @@ paths:
           $ref: "#/components/responses/NotFound"
         "409":
           $ref: "#/components/responses/Conflict"
+        "422":
+          $ref: "#/components/responses/UnprocessableEntity"
         "500":
           $ref: "#/components/responses/InternalError"
 
@@ -918,6 +960,8 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/WebhookAck"
+        "400":
+          $ref: "#/components/responses/BadRequest"
         "401":
           description: The signature did not verify. The only case that is not a 200.
           content:
@@ -980,6 +1024,8 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ProductDetail"
+        "400":
+          $ref: "#/components/responses/BadRequest"
         "401":
           $ref: "#/components/responses/Unauthorized"
         "403":
@@ -1028,6 +1074,8 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ProductDetail"
+        "400":
+          $ref: "#/components/responses/BadRequest"
         "401":
           $ref: "#/components/responses/Unauthorized"
         "403":
@@ -1078,6 +1126,8 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/AdminVariant"
+        "400":
+          $ref: "#/components/responses/BadRequest"
         "401":
           $ref: "#/components/responses/Unauthorized"
         "403":
@@ -1163,6 +1213,8 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Order"
+        "400":
+          $ref: "#/components/responses/BadRequest"
         "401":
           $ref: "#/components/responses/Unauthorized"
         "403":
@@ -1197,9 +1249,11 @@ components:
       description: >
         Opaque cursor from a previous response's `nextCursor`. Pass it back
         verbatim; never construct or parse one. A cursor issued by either
-        backend must work against the other.
+        backend must work against the other. An empty value is a 422, not
+        "the first page" — omit the parameter for that.
       schema:
         type: string
+        minLength: 1
     Limit:
       name: limit
       in: query
@@ -1396,8 +1450,10 @@ components:
           description: Account identifier.
         email:
           type: string
-          format: email
-          description: Login address. Unique, compared case-insensitively.
+          description: >
+            Login address. Unique, compared case-insensitively. Whatever
+            registration accepted, so it matches that pattern rather than a
+            library's `format: email`.
         fullName:
           type: string
           description: Display name.
@@ -1415,9 +1471,13 @@ components:
       properties:
         email:
           type: string
-          format: email
+          pattern: "^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$"
           maxLength: 255
-          description: Must not already be registered.
+          description: >
+            Must not already be registered. Validated by this pattern alone — not
+            by a library's idea of an email address, because class-validator and
+            Hibernate Validator disagree at the edges and the two backends must
+            accept exactly the same set.
         password:
           type: string
           minLength: 10
@@ -1438,11 +1498,15 @@ components:
       properties:
         email:
           type: string
-          format: email
-          description: Login address.
+          pattern: "^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$"
+          maxLength: 255
+          description: Login address. Same pattern as registration.
         password:
           type: string
-          description: Plaintext password, over TLS only.
+          maxLength: 1024
+          description: >
+            Plaintext password, over TLS only. No minimum here: a short guess is
+            just a wrong password, and gets the same 401.
 
     RefreshRequest:
       type: object
@@ -1451,7 +1515,19 @@ components:
       properties:
         refreshToken:
           type: string
+          maxLength: 256
           description: The token issued by the most recent login or refresh.
+
+    LogoutRequest:
+      type: object
+      description: >
+        The session to end. With a token, its family is revoked; without one but
+        with a bearer, every family of that user is; with neither, still 204.
+      properties:
+        refreshToken:
+          type: string
+          maxLength: 256
+          description: The refresh token of the session to end.
 
     TokenPair:
       type: object
@@ -1829,6 +1905,7 @@ components:
       properties:
         cartToken:
           type: string
+          maxLength: 256
           description: >
             The `X-Cart-Token` the browser held before signing in. An unknown or
             already-merged value is not an error.
@@ -1843,14 +1920,17 @@ components:
       properties:
         recipientName:
           type: string
+          minLength: 1
           maxLength: 120
           description: Who is receiving the parcel.
         phone:
           type: string
+          minLength: 1
           maxLength: 32
           description: Contact number for the courier.
         line1:
           type: string
+          minLength: 1
           maxLength: 200
           description: Street address.
         line2:
@@ -1859,10 +1939,12 @@ components:
           description: Apartment, floor, or district. Omitted when not supplied.
         city:
           type: string
+          minLength: 1
           maxLength: 100
           description: City or district.
         province:
           type: string
+          minLength: 1
           maxLength: 100
           description: Province.
         postalCode:
@@ -2088,6 +2170,7 @@ components:
       properties:
         cardNumber:
           type: string
+          pattern: "^[0-9]{12,19}$"
           description: >
             Test card. `4242424242424242` succeeds; `4000000000000002` fails.
             Never stored.
@@ -2276,9 +2359,15 @@ components:
       properties:
         delta:
           type: integer
+          minimum: -1000000
+          maximum: 1000000
+          not:
+            const: 0
           description: >
-            Units to add, or a negative number to remove. Rejected with 409 if
-            the result would fall below the variant's reserved stock.
+            Units to add, or a negative number to remove. Never zero: a change of
+            nothing is not an adjustment and would only add a noise row to the
+            audit trail. Rejected with 409 if the result would fall below the
+            variant's reserved stock.
           examples: [10]
         reason:
           type: string
@@ -2296,6 +2385,14 @@ components:
           $ref: "#/components/schemas/OrderStatus"
 
   responses:
+    BadRequest:
+      description: >
+        The body could not be parsed at all — malformed JSON. A body that parses
+        but breaks the schema is a 422, not this.
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
     Unauthorized:
       description: Authentication is missing or invalid.
       content:
